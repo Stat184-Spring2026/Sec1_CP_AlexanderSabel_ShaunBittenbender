@@ -1,22 +1,25 @@
-# Project Title
+# Effect of NFL teams travel distance on game performance
 
-Write a 1-2 sentences that quickly and clearly convey what your repo is for.
-
+This repo is for comparing different statistics from the away teams of NFL games and seeing if there is any correlation between distance and performance.
 ## Overview
 
-Expand on those introductory sentences with a brief but informative description of your project's purpose and goals. This section should help visitors decide whether they should dig deeper into your repo/project.
+The goal of this repo is to look at all these NFL games that have been played over the last few years and seeing if there is some kind of correlation between the distance the away team has to travel and the performance in those games. 
+The states that we will be looking at are things like win/lose percentage, average yards, fumbles and interceptions, and completion percentage.
 
-### Interesting Insight (Optional)
-
-This is optional but highly recommended. You'll include one interesting insight from your project as part of the README. This insight is most effective when you include a visual. Keep in mind that this visual must be included as an image file (e.g., JPG, PNG, etc.). You can export plots created with `{ggplot2}` by using the function `ggsave`.
 
 ## Data Sources and Acknowledgements
 
-Be sure to list where you got any data used within the project. Be sure to acknowledge any one whose work or elements you're drawing upon.
+The main area we are getting this data from is the nflreadr package in R and data about the package from the [Sports Data Repository](https://data.scorenetwork.org/football/nfl-team-statistics.html)
+The stadium locations we got off of [wikipedia](https://en.wikipedia.org/wiki/List_of_current_NFL_stadiums)
 
 ## Current Plan
 
-Provide some information about what you intend to do with the project. You can additionally refer the visitor to your detailed plan document.
+Our current plan includes:
+1. Cleaning and organizing NFL game data to isolate away team performance  
+2. Calculating travel distances between team locations using geographic coordinates  
+3. Analyzing the relationship between travel distance and other variables  
+4. Creating visualizations to highlight trends  
+5. Interpreting results to determine whether travel distance has a meaningful impact
 
 ## Repo Structure
 
@@ -25,4 +28,4 @@ Use this section to explain the structure of your repo. This should help visitor
 
 ## Authors
 
-Give information about who are the authors of the project and how people can get in touch if they have questions.
+Please contact any of us for any questions:
