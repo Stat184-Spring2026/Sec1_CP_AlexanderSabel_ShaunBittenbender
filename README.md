@@ -29,3 +29,5 @@ Use this section to explain the structure of your repo. This should help visitor
 ## Authors
 
 Please contact any of us for any questions:
+[Shaun Bittenbender](mailto:smb8620@psu.edu)
+[Alexander Sabel](mailto:avs7570@psu.edu)
