@@ -8,5 +8,5 @@ games <- load_schedules(seasons = TRUE)
 simple_table <- games %>%
   select(game_id, home_team, away_team)
 
-# View it
+#View it
 View(simple_table)

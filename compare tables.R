@@ -50,5 +50,46 @@ comparison_table <- team_home_away_split %>%
     values_from = c(avg_completion_pct, avg_total_yards, avg_epa, avg_interceptions, games)
   )
 
-# View final comparison
-print(comparison_table)
+View(comparison_table)
+
+
+library(ggplot2)
+
+ggplot(comparison_table, aes(x = avg_epa_home, y = avg_epa_away)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  labs(
+    title = "Team EPA: Home vs Away",
+    x = "Average EPA (Home)",
+    y = "Average EPA (Away)"
+  )
+
+
+
+comparison_table <- comparison_table %>%
+  mutate(epa_diff = avg_epa_home - avg_epa_away)
+
+ggplot(comparison_table, aes(x = reorder(team, epa_diff), y = epa_diff)) +
+  geom_col() +
+  coord_flip() +
+  labs(
+    title = "EPA Difference (Home - Away) by Team",
+    x = "Team",
+    y = "EPA Difference"
+  )
+
+
+
+comparison_long <- comparison_table %>%
+  select(team, avg_epa_home, avg_epa_away) %>%
+  pivot_longer(cols = -team,
+               names_to = "location",
+               values_to = "epa")
+
+ggplot(comparison_long, aes(x = location, y = epa)) +
+  geom_boxplot() +
+  labs(
+    title = "Distribution of EPA: Home vs Away",
+    x = "Location",
+    y = "EPA"
+  )
