@@ -8,13 +8,13 @@ editor: visual
 
 This document analyzes the effect of NFL team's travel distance on game performance by analyzing different metrics.
 
-## Background
+### Background
 
 NFL teams are based on geographic areas and have a home stadium/facility that they train from. Teams play an 18 week regular season, and have another 4 weeks of playoffs depending on regular season performance. Each team plays every weekend, so there becomes a lot of travel involved around the weekend when teams play. When traveling for away games, some teams can travel up to 3,000 miles going from coast to coast. Therefore there may be a relationship between exhausting long distance travel and game day performance. To analyze the effects of NFL team's travel, we look at not only win percentage, but more individual statistics such as defensive interception rate, offensive rush yard averages, and offensive 3rd down conversion rates for example.
 
 ------------------------------------------------------------------------
 
-## Challenges
+### Challenges
 
 One challenge we encountered was getting the distances that NFL team's had to travel. Unlike the statistics for individual games, the travel distance of teams was not already in an established data package to import. To get the travel distance, we first manually got the rough latitude and longitude coordinates for every team's stadium, then mapped the coordinates to a team's acronym. Then by importing the geosphere package we were able to get the straight line distance between two stadiums in meters. Finally converting this distance into miles gives our metric.
 
@@ -24,7 +24,7 @@ One challenge we encountered was getting the distances that NFL team's had to tr
 
 ### Overview
 
-In this segment we will be looking at the base performance stats for the away teams not putting the specific distance into consideration yet.
+In this segment we will be looking at the base performance stats for the away teams not putting the specific distance into consideration yet. The data comes from the NFLreadr package in R
 
 ### Win/Lose percentage
 
@@ -52,25 +52,23 @@ away_win_pct
 
 ```
 
-As you can see from the data above during the 2022-2024 seasons, the win/lose rates for the away teams was about a 44%. This may not seem significant as 44% is close to 50% but these stats are similar throughout every single season. It's not like some seasons its above 50% and some are below, they are all consistently close to the 44%. This gives us reason to believe that there may be something going on where the away side have some sort of disadvantaged. Before we continue we will look at some more specific stats for these teams using the first 8 teams for room.
+As you can see from the data above during the 2022-2024 seasons, the win/lose rates for the away teams was about a 44%. This may not seem significant as 44% is close to 50% but these stats are similar throughout every single season. It's not like some seasons its above 50% and some are below, they are all consistently close to the 44%. This gives us reason to believe that there may be something going on where the away side have some sort of disadvantaged. Before we continue we will look at some more specific stats for these teams using the 2023 season.
 
 ### Team Compare Table
 
 ```{r}
 
 # Load libraries
-library(nflreadr)
-library(dplyr)
+
 library(tidyr)
 library(knitr)
-library(ggplot2)
 
 # Load data
-games <- load_schedules(2023)
-pbp <- load_pbp(2023)
+g <- load_schedules(2023)
+p <- load_pbp(2023)
 
 # Step 1: Aggregate stats at team-game level
-team_game_stats <- pbp %>%
+tg_stats <- p %>%
   filter(!is.na(posteam)) %>%
   group_by(game_id, team = posteam) %>%
   summarise(
@@ -83,7 +81,7 @@ team_game_stats <- pbp %>%
   )
 
 # Step 2: Label games as home or away
-team_games <- games %>%
+tg <- g %>%
   select(game_id, home_team, away_team) %>%
   pivot_longer(
     cols = c(home_team, away_team),
@@ -93,11 +91,11 @@ team_games <- games %>%
   mutate(location = ifelse(location == "home_team", "home", "away"))
 
 # Step 3: Join stats with location
-team_stats_with_location <- team_games %>%
-  left_join(team_game_stats, by = c("game_id", "team"))
+ts_loc <- tg %>%
+  left_join(tg_stats, by = c("game_id", "team"))
 
-# Step 4: Compute averages
-team_home_away_split <- team_stats_with_location %>%
+# Step 4: Compute averages for each team (home vs away)
+split_stats <- ts_loc %>%
   group_by(team, location) %>%
   summarise(
     avg_completion_pct = mean(completion_pct, na.rm = TRUE),
@@ -108,48 +106,143 @@ team_home_away_split <- team_stats_with_location %>%
     .groups = "drop"
   )
 
+# Step 5: Put home vs away side-by-side
+comp_tbl <- split_stats %>%
+  pivot_wider(
+    names_from = location,
+    values_from = c(
+      avg_completion_pct,
+      avg_total_yards,
+      avg_epa,
+      avg_interceptions,
+      games
+    )
+  )
+
+# Step 6: Rename columns to be table-friendly
+clean_tbl <- comp_tbl %>%
+  rename(
+    `Comp % (Away)` = avg_completion_pct_away,
+    `Comp % (Home)` = avg_completion_pct_home,
+    `Yards (Away)` = avg_total_yards_away,
+    `Yards (Home)` = avg_total_yards_home,
+    `EPA (Away)` = avg_epa_away,
+    `EPA (Home)` = avg_epa_home,
+    `INTs (Away)` = avg_interceptions_away,
+    `INTs (Home)` = avg_interceptions_home,
+    `Games (Away)` = games_away,
+    `Games (Home)` = games_home
+  )
+
+# Step 7: Display clean table
+kable(
+  head(clean_tbl, 16),
+  digits = 2,
+  align = "lcccccccccc",
+  caption = "Home vs Away Team Performance (2023)"
+)
+
 ```
+
+As you can see from the tables above, most of the teams have lower average stats when they are the away team which supports the initial idea that teams perform worse when they are away. This isn't perfect however as there are some teams in the data who actually have some higher away stats compared to their home stats. This makes sense as it would be statistically unlikely that every single team performs worse when they are away on average, sometimes they have good seasons/games and sometimes they don't. Our first theory was that many these teams are closer to the center of the United States, meaning that they don't have to travel as far for their away games compared to a team on the coast.
 
 ```{r}
 
-completion_table <- team_home_away_split %>%
-  select(team, location, avg_completion_pct) %>%
-  pivot_wider(names_from = location, values_from = avg_completion_pct)
+library(ggplot2)
 
-kable(head(completion_table, 8), digits = 2,
-      caption = "Completion Percentage (Home vs Away)")
-
-```
-
-```{r}
-
-yards_table <- team_home_away_split %>%
-  select(team, location, avg_total_yards) %>%
-  pivot_wider(names_from = location, values_from = avg_total_yards)
-
-kable(head(yards_table, 8), digits = 1,
-      caption = "Average Total Yards (Home vs Away)")
-
-```
-
-```{r}
-
-epa_table <- team_home_away_split %>%
+comparison_long <- split_stats %>%
   select(team, location, avg_epa) %>%
-  pivot_wider(names_from = location, values_from = avg_epa)
+  rename(epa = avg_epa)
 
-kable(head(epa_table, 8), digits = 2,
-      caption = "Average EPA (Home vs Away)")
+ggplot(comparison_long, aes(x = location, y = epa)) +
+  geom_boxplot() +
+  labs(
+    title = "Distribution of EPA: Home vs Away",
+    x = "Location",
+    y = "EPA"
+  )
+
+```
+
+This plot shows a visual example of the average away stats being lower than the average home stats for the season.
+
+## Part 3: The distances
+
+### Overview
+
+In this segment we will be talking about how we will compare the distances that each team has to travel for their away games, while also showing off some examples.
+
+### How we got the distances
+
+The first thing we did was try to find a website out there that showed us each stadium location, and we ended up using Wikipedia for this. The next thing we did was gather the exact coordinates (longitude and latitude) for these stadiums as best as we could. We then wrote a code that assigns these to each stadium for comparison. This code then takes two stadiums subtracts these values, puts it to the absolute value, and then finally converts the distance into miles to we can see roughly how far they are from each other.
+
+### Examples
+
+```{r}
+
+library(geosphere)
+
+games <- load_schedules(seasons = TRUE)
+
+simple_table <- games |>
+  select(game_id, home_team, away_team)
+
+# 3. Create a coordinate mapping
+team_coords <- data.frame(
+  team = c("ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN", 
+           "DET", "GB", "HOU", "IND", "JAX", "KC", "OAK", "SD", "STL", "MIA", 
+           "MIN", "NE", "NO", "NYG", "NYJ", "PHI", "PIT", "SF", "SEA", "TB", "TEN", "WAS"),
+  lat = c(33.527, 33.757, 39.285, 42.773, 35.225, 41.862, 39.095, 41.506, 32.747, 39.743, 
+          42.340, 44.501, 29.684, 39.760, 30.323, 39.048, 36.090, 33.953, 33.953, 25.957, 
+          44.973, 42.090, 29.951, 40.812, 40.812, 39.900, 40.446, 37.403, 47.595, 27.975, 36.166, 38.907),
+  long = c(-112.262, -84.400, -76.620, -78.786, -80.852, -87.616, -84.516, -81.699, -97.092, -105.020, 
+           -83.045, -88.062, -95.408, -86.163, -81.637, -94.483, -115.183, -118.338, -118.338, -80.238, 
+           -93.257, -71.264, -90.081, -74.074, -74.074, -75.167, -80.015, -121.969, -122.331, -82.503, -86.771, -77.036)
+)
+
+# 4. Join and Calculate Distance
+simple_table <- simple_table |>
+  left_join(team_coords, by = c("home_team" = "team")) |>
+  rename(home_lat = lat, home_long = long) |>
+  left_join(team_coords, by = c("away_team" = "team")) |>
+  rename(away_lat = lat, away_long = long) |>
+  rowwise() |>
+  mutate(
+    distance_miles = distHaversine(
+      c(home_long, home_lat), 
+      c(away_long, away_lat)
+    ) * 0.000621371
+  ) |>
+  ungroup() |>
+  select(game_id, home_team, away_team, distance_miles)
 
 ```
 
 ```{r}
 
-int_table <- team_home_away_split %>%
-  select(team, location, avg_interceptions) %>%
-  pivot_wider(names_from = location, values_from = avg_interceptions)
+distance_examples <- simple_table %>%
+  filter(
+    (home_team == "DAL" & away_team == "NYJ") |  
+    (home_team == "SEA" & away_team == "MIA") | 
+    (home_team == "PHI" & away_team == "NYG") |  
+    (home_team == "SF"  & away_team == "KC")  |  
+    (home_team == "DEN" & away_team == "TB")   
+  ) %>%
+  mutate(
+    matchup = paste(away_team, "to", home_team)
+  ) %>%
+  select(matchup, distance_miles) %>%
+  distinct() %>%
+  arrange(distance_miles)
 
-kable(head(int_table, 8), digits = 2,
-      caption = "Average Interceptions (Home vs Away)")
+
+kable(
+  distance_examples,
+  digits = 4,
+  caption = "Examples of Away-Team Travel Distances"
+)
+
 
 ```
+
+## Part 4: Putting it all together
