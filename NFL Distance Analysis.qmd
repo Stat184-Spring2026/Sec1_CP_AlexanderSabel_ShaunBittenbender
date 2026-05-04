@@ -1,0 +1,19 @@
+---
+title: "Ulnar Calcium Measurements Analysis"
+format: html
+editor: visual
+---
+
+## Overview
+
+This document analyzes the effect of NFL team's travel distance on game performance by analyzing different metrics.
+
+## Background
+
+NFL teams are based on geographic areas and have a home stadium/facility that they train from. Teams play an 18 week regular season, and have another 4 weeks of playoffs depending on regular season performance. Each team plays every weekend, so there becomes a lot of travel involved around the weekend when teams play. When traveling for away games, some teams can travel up to 3,000 miles going from coast to coast. Therefore there may be a relationship between exhausting long distance travel and game day performance. To analyze the effects of NFL team's travel, we look at not only win percentage, but more individual statistics such as defensive interception rate, offensive rush yard averages, and offensive 3rd down conversion rates for example.
+
+------------------------------------------------------------------------
+
+## Challenges
+
+One challenge we encountered was getting the distances that NFL team's had to travel. Unlike the statistics for individual games, the travel distance of teams was not already in an established data package to import. To get the travel distance, we first manually got the rough latitude and longitude coordinates for every team's stadium, then mapped the coordinates to a team's acronym. Then by importing the geosphere package we were able to get the straight line distance between two stadiums in meters. Finally converting this distance into miles gives our metric.
