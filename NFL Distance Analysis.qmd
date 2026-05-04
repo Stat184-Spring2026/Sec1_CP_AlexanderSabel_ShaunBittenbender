@@ -1,10 +1,10 @@
 ---
-title: "Ulnar Calcium Measurements Analysis"
-format: html
+title: "NFL Distance Analysis"
+format: pdf
 editor: visual
 ---
 
-## Overview
+## Part 1: Overview
 
 This document analyzes the effect of NFL team's travel distance on game performance by analyzing different metrics.
 
@@ -17,3 +17,139 @@ NFL teams are based on geographic areas and have a home stadium/facility that th
 ## Challenges
 
 One challenge we encountered was getting the distances that NFL team's had to travel. Unlike the statistics for individual games, the travel distance of teams was not already in an established data package to import. To get the travel distance, we first manually got the rough latitude and longitude coordinates for every team's stadium, then mapped the coordinates to a team's acronym. Then by importing the geosphere package we were able to get the straight line distance between two stadiums in meters. Finally converting this distance into miles gives our metric.
+
+------------------------------------------------------------------------
+
+## Part 2: The initial stats
+
+### Overview
+
+In this segment we will be looking at the base performance stats for the away teams not putting the specific distance into consideration yet.
+
+### Win/Lose percentage
+
+The first metric we decided to look at was the base win/lose percentage as even though this won't tell the full story, it would be a good starting point.
+
+```{r}
+
+#load packages
+library(nflreadr)
+library(dplyr)
+
+#load schedule data (example: multiple seasons)
+games <- load_schedules(2022:2024)
+
+#calculates away win percentage
+away_win_pct <- games %>%
+  filter(!is.na(home_score), !is.na(away_score)) %>%  #removes games without scores
+  mutate(away_win = away_score > home_score) %>%
+  summarise(
+    total_games = n(),
+    away_wins = sum(away_win),
+    away_win_percentage = away_wins / total_games
+  )
+away_win_pct
+
+```
+
+As you can see from the data above during the 2022-2024 seasons, the win/lose rates for the away teams was about a 44%. This may not seem significant as 44% is close to 50% but these stats are similar throughout every single season. It's not like some seasons its above 50% and some are below, they are all consistently close to the 44%. This gives us reason to believe that there may be something going on where the away side have some sort of disadvantaged. Before we continue we will look at some more specific stats for these teams using the first 8 teams for room.
+
+### Team Compare Table
+
+```{r}
+
+# Load libraries
+library(nflreadr)
+library(dplyr)
+library(tidyr)
+library(knitr)
+library(ggplot2)
+
+# Load data
+games <- load_schedules(2023)
+pbp <- load_pbp(2023)
+
+# Step 1: Aggregate stats at team-game level
+team_game_stats <- pbp %>%
+  filter(!is.na(posteam)) %>%
+  group_by(game_id, team = posteam) %>%
+  summarise(
+    completion_pct = mean(complete_pass, na.rm = TRUE),
+    total_yards = sum(yards_gained, na.rm = TRUE),
+    avg_yards = mean(yards_gained, na.rm = TRUE),
+    total_epa = sum(epa, na.rm = TRUE),
+    interceptions = sum(interception, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Step 2: Label games as home or away
+team_games <- games %>%
+  select(game_id, home_team, away_team) %>%
+  pivot_longer(
+    cols = c(home_team, away_team),
+    names_to = "location",
+    values_to = "team"
+  ) %>%
+  mutate(location = ifelse(location == "home_team", "home", "away"))
+
+# Step 3: Join stats with location
+team_stats_with_location <- team_games %>%
+  left_join(team_game_stats, by = c("game_id", "team"))
+
+# Step 4: Compute averages
+team_home_away_split <- team_stats_with_location %>%
+  group_by(team, location) %>%
+  summarise(
+    avg_completion_pct = mean(completion_pct, na.rm = TRUE),
+    avg_total_yards = mean(total_yards, na.rm = TRUE),
+    avg_epa = mean(total_epa, na.rm = TRUE),
+    avg_interceptions = mean(interceptions, na.rm = TRUE),
+    games = n(),
+    .groups = "drop"
+  )
+
+```
+
+```{r}
+
+completion_table <- team_home_away_split %>%
+  select(team, location, avg_completion_pct) %>%
+  pivot_wider(names_from = location, values_from = avg_completion_pct)
+
+kable(head(completion_table, 8), digits = 2,
+      caption = "Completion Percentage (Home vs Away)")
+
+```
+
+```{r}
+
+yards_table <- team_home_away_split %>%
+  select(team, location, avg_total_yards) %>%
+  pivot_wider(names_from = location, values_from = avg_total_yards)
+
+kable(head(yards_table, 8), digits = 1,
+      caption = "Average Total Yards (Home vs Away)")
+
+```
+
+```{r}
+
+epa_table <- team_home_away_split %>%
+  select(team, location, avg_epa) %>%
+  pivot_wider(names_from = location, values_from = avg_epa)
+
+kable(head(epa_table, 8), digits = 2,
+      caption = "Average EPA (Home vs Away)")
+
+```
+
+```{r}
+
+int_table <- team_home_away_split %>%
+  select(team, location, avg_interceptions) %>%
+  pivot_wider(names_from = location, values_from = avg_interceptions)
+
+kable(head(int_table, 8), digits = 2,
+      caption = "Average Interceptions (Home vs Away)")
+
+```
