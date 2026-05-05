@@ -2,6 +2,7 @@
 
 This repository analyzes whether travel distance impacts away team performance in the National Football League (NFL) using game‑level data and advanced performance metrics.
 
+This repo is for comparing different statistics from the away teams of NFL games and seeing if there is any correlation between distance and performance.
 ## Overview
 
 The purpose of this project is to investigate whether the physical distance NFL teams travel for away games helps explain the performance gap between home and away teams. Using play‑by‑play and schedule data from recent NFL seasons, this project compares away team outcomes—including win percentage, Expected Points Added (EPA), completion percentage, and total yards—to the distance traveled for each game. The analysis finds that while away teams generally perform worse than home teams, travel distance alone does not strongly explain this disadvantage.
