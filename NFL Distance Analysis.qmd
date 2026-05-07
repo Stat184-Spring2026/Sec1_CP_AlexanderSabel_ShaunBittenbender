@@ -3,6 +3,8 @@ title: "NFL Distance Analysis"
 authors: "Shaun Bittenbender and Alexander Sabel"
 format: pdf
 editor: visual
+bibliography: references.bib
+csl: MLA9.csl
 ---
 
 ```{r setup, include=FALSE}
@@ -15,31 +17,38 @@ knitr::opts_chunk$set(
 
 ## Part 1: Overview
 
-This document analyzes the effect of NFL team's travel distance on game performance by analyzing different metrics.
+This document analyzes the effect of NFL team travel distance on game performance using several performance metrics.
 
 ### Background
 
-NFL teams are based on geographic areas and have a home stadium/facility that they train from. Teams play an 18 week regular season, and have another 4 weeks of playoffs depending on regular season performance. Each team plays every weekend, so there becomes a lot of travel involved around the weekend when teams play. When traveling for away games, some teams can travel up to 3,000 miles going from coast to coast. Therefore there may be a relationship between exhausting long distance travel and game day performance. To analyze the effects of NFL team's travel, we look at not only win percentage, but more individual statistics such as EPA, yardage, passing efficiency, and turnovers for example.
-
-------------------------------------------------------------------------
+NFL teams are based on geographic areas and have a home stadium/facility that they train from. These NFL teams play an 18‑week regular season, followed by up to four weeks of postseason play depending on regular‑season performance. Each team plays nearly every week, which requires frequent travel throughout the season. When traveling for away games, some teams may travel up to 3,000 miles when playing cross‑country opponents. This raises the question of whether long‑distance travel negatively affects game‑day performance. To explore this possibility, we examine not only win percentage, but also individual performance metrics such as Expected Points Added (EPA), yardage, passing efficiency, and turnovers
 
 ### Challenges
 
-One challenge we encountered was getting the distances that NFL team's had to travel. Unlike the statistics for individual games, the travel distance of teams was not already in an established data package to import. To get the travel distance, we first manually got the rough latitude and longitude coordinates for every team's stadium, then mapped the coordinates to a team's acronym. Then by importing the geosphere package we were able to get the straight line distance between two stadiums in meters. Finally converting this distance into miles gives our metric.
+One challenge we encountered was getting the distances that NFL team's had to travel. Unlike the statistics for individual games, the travel distance of teams was not already in an established data package to import. To get the travel distance, we first manually got the rough latitude and longitude coordinates for every team's stadium, then mapped the coordinates to a team's acronym. Then by importing the geosphere package [@geosphere] we were able to get the straight line distance between two stadiums in meters. Finally converting this distance into miles gives our metric.
 
-------------------------------------------------------------------------
+### Fair and Care comparasion
+
+The datasets used in this analysis comply with the FAIR principles, as they are publicly accessible, well-documented, and reused under open licenses. CARE principles are less directly applicable given the absence of human-subject-specific data, but ethical use and transparency were maintained throughout the analysis
+
+
+### Open Science Statement
+
+This project follows Open Science principles through the use of publicly available data, open‑source software, transparent methods, and a fully reproducible analysis workflow.
 
 ## Part 2: The initial stats
 
 ### Overview
 
-In this segment we will be looking at the base performance stats for the away teams not putting the specific distance into consideration yet. The data comes from the NFLreadr package in R
+In this section, we examine baseline performance statistics for away teams without yet considering travel distance. The data used in this analysis come from the nflreadr package for R [@nflreadr].
 
 ### Win/Lose percentage
 
 The first metric we decided to look at was the base win/lose percentage as even though this won't tell the full story, it would be a good starting point.
 
 ```{r}
+
+# Code follows the Tidyverse Style Guide
 
 #load packages
 library(nflreadr)
@@ -61,22 +70,25 @@ away_win_pct
 
 ```
 
-As you can see from the data above during the 2022-2024 seasons, the win/lose rates for the away teams was about a 44%. This may not seem significant as 44% is close to 50% but these stats are similar throughout every single season. It's not like some seasons its above 50% and some are below, they are all consistently close to the 44%. This gives us reason to believe that there may be something going on where the away side have some sort of disadvantaged. Before we continue we will look at some more specific stats for these teams using the 2023 season.
+As you can see from the data above during the 2022-2024 seasons, the win/lose rates for the away teams was about a 44%. This may not seem significant as 44% is close to 50% but these stats are similar throughout every single season. It's not like some seasons its above 50% and some are below, they are all consistently close to the 44%. This consistency suggests that away teams may be operating under a persistent disadvantage when compared to home teams. Before we continue we will look at some more specific stats for these teams using the 2023 season.
 
 ### Team Compare Table
 
+Table alt text: This table compares average offensive and passing performance metrics for NFL teams when playing at home versus away during the 2023 season. Metrics shown include completion percentage, total yards, total EPA, interceptions, and number of games played. Values are presented side‑by‑side to highlight differences between home and away performance.
+
 ```{r}
 
-# Load libraries
+# Author: Shaun Bittenbender
+# Reviewer: Alexander Sabel
 
 library(tidyr)
 library(knitr)
 
-# Load data
+#Load data
 g <- load_schedules(2023)
 p <- load_pbp(2023)
 
-# Step 1: Aggregate stats at team-game level
+#Step 1: Aggregate stats at team-game level
 tg_stats <- p %>%
   filter(!is.na(posteam)) %>%
   group_by(game_id, team = posteam) %>%
@@ -89,7 +101,7 @@ tg_stats <- p %>%
     .groups = "drop"
   )
 
-# Step 2: Label games as home or away
+#Step 2: Label games as home or away
 tg <- g %>%
   select(game_id, home_team, away_team) %>%
   pivot_longer(
@@ -99,11 +111,11 @@ tg <- g %>%
   ) %>%
   mutate(location = ifelse(location == "home_team", "home", "away"))
 
-# Step 3: Join stats with location
+#Step 3: Join stats with location
 ts_loc <- tg %>%
   left_join(tg_stats, by = c("game_id", "team"))
 
-# Step 4: Compute averages for each team (home vs away)
+#Step 4: Compute averages for each team (home vs away)
 split_stats <- ts_loc %>%
   group_by(team, location) %>%
   summarise(
@@ -115,7 +127,7 @@ split_stats <- ts_loc %>%
     .groups = "drop"
   )
 
-# Step 5: Put home vs away side-by-side
+#Step 5: Put home vs away side-by-side
 comp_tbl <- split_stats %>%
   pivot_wider(
     names_from = location,
@@ -128,7 +140,7 @@ comp_tbl <- split_stats %>%
     )
   )
 
-# Step 6: Rename columns to be table-friendly
+#Step 6: Rename columns to be table-friendly
 clean_tbl <- comp_tbl %>%
   rename(
     `Comp % (Away)` = avg_completion_pct_away,
@@ -143,7 +155,7 @@ clean_tbl <- comp_tbl %>%
     `Games (Home)` = games_home
   )
 
-# Step 7: Display clean table
+#Step 7: Display clean table
 kable(
   head(clean_tbl, 16),
   digits = 2,
@@ -153,9 +165,14 @@ kable(
 
 ```
 
-As you can see from the tables above, most of the teams have lower average stats when they are the away team which supports the initial idea that teams perform worse when they are away. This isn't perfect however as there are some teams in the data who actually have some higher away stats compared to their home stats. This makes sense as it would be statistically unlikely that every single team performs worse when they are away on average, sometimes they have good seasons/games and sometimes they don't. Our first theory was that many these teams are closer to the center of the United States, meaning that they don't have to travel as far for their away games compared to a team on the coast.
+As you can see from the tables above, most of the teams have lower average stats when they are the away team which supports the initial idea that teams perform worse when they are away. While most of these teams perform worse on average when playing away, there are exceptions in which some teams exhibit comparable or even stronger away performance. This variability is expected, as performance can fluctuate across seasons and matchups. Our first theory was that many these teams are closer to the center of the United States, meaning that they don't have to travel as far for their away games compared to a team on the coast.
 
 ```{r}
+
+#| fig-alt: "Boxplot comparing average EPA for NFL teams when playing at home versus away. The distribution shows higher median EPA values for home games than away games, indicating a general home-field advantage."
+
+# Author: Shaun Bittenbender
+# Reviewer: Alexander Sabel
 
 library(ggplot2)
 
@@ -173,7 +190,7 @@ ggplot(comparison_long, aes(x = location, y = epa)) +
 
 ```
 
-This plot shows a visual example of the average away stats being lower than the average home stats for the season.
+This boxplot provides a clear visual comparison of average EPA values for home and away teams, showing that away teams generally have lower median performance during the season.
 
 ## Part 3: The distances
 
@@ -183,11 +200,16 @@ In this segment we will be talking about how we will compare the distances that 
 
 ### How we got the distances
 
-The first thing we did was try to find a website out there that showed us each stadium location, and we ended up using Wikipedia for this. The next thing we did was gather the exact coordinates (longitude and latitude) for these stadiums as best as we could. We then wrote a code that assigns these to each stadium for comparison. This code then takes two stadiums subtracts these values, puts it to the absolute value, and then finally converts the distance into miles to we can see roughly how far they are from each other. Distances are calculated as straight‑line distances and therefore do not reflect exact flight paths or travel schedules.
+The first thing we did was try to find a website out there that showed us each stadium location. The stadium latitude and longitude coordinates were gathered from a publicly available source Wikipedia [@wikipedia_stadiums]. We then wrote code to assign these coordinates to each team for comparison across games, put it to the absolute value, and then finally converts the distance into miles to we can see roughly how far they are from each other. Distances are calculated as straight‑line distances and therefore do not reflect exact flight paths or travel schedules.
 
 ### Examples
 
+Table alt text: This table shows examples of travel distances for selected NFL away‑team matchups. Each row lists an away‑to‑home team pairing along with the straight‑line travel distance between their stadiums in miles, illustrating variation in short‑ and long‑distance travel.
+
 ```{r}
+
+# Author: Alexander Sabel
+# Reviewer: Shaun Bittenbender
 
 library(geosphere)
 
@@ -196,7 +218,7 @@ games <- load_schedules(seasons = TRUE)
 simple_table <- games |>
   select(game_id, home_team, away_team)
 
-# 3. Create a coordinate mapping
+#Create a coordinate mapping
 team_coords <- data.frame(
   team = c("ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN", 
            "DET", "GB", "HOU", "IND", "JAX", "KC", "OAK", "SD", "STL", "MIA", 
@@ -209,7 +231,7 @@ team_coords <- data.frame(
            -93.257, -71.264, -90.081, -74.074, -74.074, -75.167, -80.015, -121.969, -122.331, -82.503, -86.771, -77.036)
 )
 
-# 4. Join and Calculate Distance
+#Join and Calculate Distance
 simple_table <- simple_table |>
   left_join(team_coords, by = c("home_team" = "team")) |>
   rename(home_lat = lat, home_long = long) |>
@@ -260,11 +282,17 @@ kable(
 
 In this segment we will now be putting everything together and seeing if there is truly a comparison between the performance of away teams and the distance they travel.
 
-### The plot
+### The plots
 
 ```{r, message=FALSE, warning=FALSE}
 
-# Step 1: Extract away-team EPA at the game level
+
+# Author: Shaun Bittenbender
+# Reviewer: Alexander Sabel
+
+#| fig-alt: "Scatter plot showing away team total EPA versus travel distance in miles for NFL games. Each point represents one game, with a fitted linear trend line indicating a weak relationship between travel distance and performance."
+
+#Step 1: Extract away-team EPA at the game level
 away_game_epa <- tg %>%
   filter(location == "away") %>%
   left_join(tg_stats, by = c("game_id", "team")) %>%
@@ -274,12 +302,12 @@ away_game_epa <- tg %>%
     away_epa = total_epa
   )
 
-# Step 2: Join with travel distance
+#Step 2: Join with travel distance
 away_distance_perf <- simple_table %>%
   left_join(away_game_epa, by = "game_id") %>%
   filter(!is.na(away_epa), !is.na(distance_miles))
 
-# Step 3: Create the plot
+#Step 3: Create the plot
 ggplot(away_distance_perf, aes(x = distance_miles, y = away_epa)) +
   geom_point(alpha = 0.4) +
   geom_smooth(method = "lm", se = TRUE, color = "blue") +
@@ -291,11 +319,13 @@ ggplot(away_distance_perf, aes(x = distance_miles, y = away_epa)) +
 
 ```
 
-The figure above shows the relationship between away-team travel distance and total EPA. While away teams overall perform worse than home teams, the scatter plot shows no strong negative relationship between travel distance and performance. The fitted trend line indicates a very weak positive association, suggesting that longer travel distances alone do not meaningfully reduce away-team EPA. This suggests that the away-team disadvantage observed in NFL games is likely driven more by contextual and environmental factors than by travel distance itself.
+The figure above shows the relationship between away-team travel distance and total EPA. While away teams overall perform worse than home teams, the scatter plot shows no strong negative relationship between travel distance and performance. The fitted trend line indicates a very weak positive association, suggesting that longer travel distances alone do not meaningfully reduce away‑team EPA. This suggests that the away-team disadvantage observed in NFL games is likely driven more by contextual and environmental factors than by travel distance itself.
 
 ```{r, message=FALSE, warning=FALSE}
 
-# Away team completion percentage per game
+#| fig-alt: "Scatter plot illustrating away team completion percentage plotted against travel distance in miles. The plot shows wide variability across all distances and no strong relationship between increased travel and passing efficiency."
+
+#Away team completion percentage per game
 away_game_comp <- tg %>%
   filter(location == "away") %>%
   left_join(tg_stats, by = c("game_id", "team")) %>%
@@ -322,7 +352,9 @@ ggplot(away_distance_comp, aes(x = distance_miles, y = completion_pct)) +
 
 ```{r, message=FALSE, warning=FALSE}
 
-# Away team total yards per game
+#| fig-alt: "Scatter plot displaying total offensive yards gained by away teams versus travel distance in miles. Each point represents a game, with a fitted trend line showing little to no systematic change in yardage as travel distance increases."
+
+#Away team total yards per game
 away_game_yards <- tg %>%
   filter(location == "away") %>%
   left_join(tg_stats, by = c("game_id", "team")) %>%
@@ -347,7 +379,9 @@ ggplot(away_distance_yards, aes(x = distance_miles, y = away_yards)) +
 
 ```
 
-Similar to the first plot, these also show a very weak positive correlation between the performance of away teams and the distance they travel. This suggests that while away teams generally perform worse than home teams, travel distance alone does not appear to meaningfully explain this performance gap.
+Similar to the EPA results, these plots also reveal only a very weak relationship between away‑team performance and travel distance. This further supports the conclusion that distance alone does not explain the observed away‑team disadvantage.
+
+Taken together, the three distance-based visualizations show a consistent pattern across multiple performance metrics. Expected Points Added, completion percentage, and total yards all display substantial variability at every travel distance, with no clear threshold at which performance noticeably declines. While the fitted trend lines are slightly positive in some cases, the relationships are weak and likely influenced by factors unrelated to travel alone. The consistency of this pattern across different offensive metrics strengthens the conclusion that travel distance, by itself, does not meaningfully explain away-team underperformance. Instead, these results suggest that the disadvantage faced by away teams is more likely driven by situational or environmental factors rather than physical distance traveled.
 
 ## Part 5: Conclusion
 
@@ -370,6 +404,26 @@ This analysis has a few limitations. Travel distance was calculated using straig
 ### Final remarks
 
 In conclusion, although away teams tend to perform worse than home teams, this study finds that travel distance by itself does not explain that performance gap. The results suggest that home‑field advantage in the NFL is more strongly influenced by environmental and situational factors rather than the physical distance teams travel.
+
+
+### Author Contributions
+
+Shaun Bittenbender was responsible for idea development, initial table and plot construction, final Quarto table creation and visualization, and document assembly.
+
+Alexander Sabel contributed to idea development, data collection, distance calculations, and review of the final analysis.
+
+## Works Cited
+
+Hijmans, Robert J. *geosphere: Spherical Trigonometry*. CRAN,  
+https://cran.r-project.org/package=geosphere.
+
+NFLverse. *nflreadr: Download and Parse NFL Data*.  
+https://nflverse.nflverse.com/.
+
+Wikipedia Contributors. *“List of Current National Football League Stadiums.”*  
+Wikipedia, https://en.wikipedia.org/wiki/List_of_current_National_Football_League_stadiums.
+
+There is also a reference file in this repo for more information on these references.
 
 \newpage  
 # Code Appendix
