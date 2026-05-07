@@ -3,7 +3,6 @@ title: "NFL Distance Analysis"
 authors: "Shaun Bittenbender and Alexander Sabel"
 format: pdf
 editor: visual
-bibliography: references.bib
 csl: MLA9.csl
 ---
 
